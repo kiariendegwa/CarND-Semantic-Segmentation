@@ -111,19 +111,37 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
-    # TO DO:
     # Add tensorboard to this to visualize training intuitively
+    tf.summary.scalar("loss", cross_entropy_loss)
+    # Merge all summaries into a single op
+    merged_summary_op = tf.summary.merge_all()
+    
+    init = tf.global_variables_initializer()
+    logs_path = '/tmp/tensorflow_logs/image_segmentation/'
+    
+    # op to write logs to Tensorboard
+    summary_writer = tf.summary.FileWriter(logs_path, graph=tf.get_default_graph())
+    display_epoch = 20
+    
     with sess.as_default():
-        sess.run(tf.global_variables_initializer())
-       
-        for epochs in epochs:
-            image_batches = []
+        sess.run(init)
+        for epoch in epochs:
+            count = 0
             for images, labels in get_batches_fn(batch_size):
                      #training goes here
-                    sess.run([cross_entropy_loss,train_op],
+                   _, c, summary = sess.run([train_op, cross_entropy_loss, merged_summary_op],
                             feed_dict={input_image: images,
                             correct_label: labels,
                             learning_rate: learn_rate)
+                   # Write logs at every iteration
+                   summary_writer.add_summary(summary, epoch * batch_size + count)
+                   # Compute average loss
+                   avg_cost += c/batch_size
+                   count+=1
+        # Display logs per epoch step
+        if (epoch+1) % display_epoch == 0:
+                print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost)
+    print("Optimization Finished!")
 
 tests.test_train_nn(train_nn)
 
