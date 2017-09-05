@@ -141,8 +141,12 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
         # Display logs per epoch step
         if (epoch+1) % display_epoch == 0:
                 print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost)
+                      
     print("Optimization Finished!")
-
+    print("Run the command line:\n" \
+          "--> tensorboard --logdir=/tmp/tensorflow_logs " \
+          "\nThen open http://0.0.0.0:6006/ into your web browser")
+                      
 tests.test_train_nn(train_nn)
 
 
