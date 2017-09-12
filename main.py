@@ -76,6 +76,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
 
     #Final decoder layer
+    conv_1x1_layer3 = tf.layers.conv2d(conv_1x1_layer3, num_classes, kernel_size = 5, padding ='same', 
+               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3),  strides = (4,4))
     skip2 = tf.add(conv_1x1_layer3, skip1)
     output = tf.layers.conv2d(skip2, num_classes, kernel_size = 16, padding ='same',
         strides = (8,8), kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
@@ -94,6 +96,8 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    correct_label = tf.reshape(correct_label, (-1, num_classes))
+
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels = correct_label, logits = logits))
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss)
     
@@ -173,13 +177,11 @@ def run():
     # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
-    
-    correct_label = tf.placeholder(tf.float32,
-        (None, image_shape[0], image_shape[1], num_classes),
-        name='correct-label')
-    learning_rate = tf.placeholder(tf.float32, name='learning-rate')
-    
+     
     with tf.Session() as sess:
+        correct_label = tf.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
+        learning_rate = tf.placeholder(tf.float32)
+
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
