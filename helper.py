@@ -36,7 +36,7 @@ def maybe_download_pretrained_vgg(data_dir):
     missing_vgg_files = [vgg_file for vgg_file in vgg_files if not os.path.exists(vgg_file)]
     if missing_vgg_files:
         # Clean vgg dir
-        if os.path.exists(vgg_path):
+        '''if os.path.exists(vgg_path):
             shutil.rmtree(vgg_path)
         os.makedirs(vgg_path)
 
@@ -47,10 +47,10 @@ def maybe_download_pretrained_vgg(data_dir):
                 'https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/vgg.zip',
                 os.path.join(vgg_path, vgg_filename),
                 pbar.hook)
-
+        '''
         # Extract vgg
         print('Extracting model...')
-        zip_ref = zipfile.ZipFile(os.path.join(vgg_path, vgg_filename), 'r')
+        zip_ref = zipfile.ZipFile(os.path.join(vgg_path, vgg_filename).replace("\\","/"), 'r')
         zip_ref.extractall(data_dir)
         zip_ref.close()
 
