@@ -77,8 +77,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
     #Final decoder layer
     skip2 = tf.add(conv_1x1_layer3, skip1)
-    output = conv2d_transpose(skip2, num_classes, 'output',
-                              kernel=16, strides=(8, 8))
+    output = tf.layers.conv2d(skip2, num_classes, kernel_size = 16, padding ='same',
+        strides = (8,8), kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
 
     return output
 tests.test_layers(layers)
