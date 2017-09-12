@@ -61,15 +61,15 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     layer_4_1x1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, padding = 'same', kernel_initializer = init)
     layer_3_1x1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding = 'same', kernel_initializer = init)
 
-    upsample1 = tf.layers.conv2d_transpose(layer_7_1x1, num_classes, 5, strides=2, padding = 'same', kernel_initializer = init)
+    upsample1 = tf.layers.conv2d_transpose(layer_7_1x1, num_classes, kernel_size=5, strides=2, padding = 'same', kernel_initializer = init)
     layer1 = tf.layers.batch_normalization(upsample1)  
     layer1 = tf.add(layer1, layer_4_1x1)
 
-    upsample2 = tf.layers.conv2d_transpose(layer1, num_classes, 5, strides=2, padding = 'same', kernel_initializer = init)
+    upsample2 = tf.layers.conv2d_transpose(layer1, num_classes, kernel_size =5, strides=2, padding = 'same', kernel_initializer = init)
     layer2 = tf.layers.batch_normalization(upsample2)      
     layer2 = tf.add(layer2, layer_3_1x1)
 
-    output = tf.layers.conv2d_transpose(layer2, num_classes, 14, strides=8, padding = 'same', kernel_initializer = init)
+    output = tf.layers.conv2d_transpose(layer2, num_classes, kernel_size=14, strides=8, padding = 'same', kernel_initializer = init)
     return output
 
 tests.test_layers(layers)
