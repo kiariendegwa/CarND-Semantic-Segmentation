@@ -55,34 +55,23 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+    init = tf.truncated_normal_initializer(stddev = 0.01)
 
-    #Decoder
-    conv_1x1_layer7 = tf.layers.conv2d(vgg_layer7_out, num_classes, kernel_size = 1, padding ='same', 
-               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
+    layer_7_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding = 'same', kernel_initializer = init)
+    layer_4_1x1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, padding = 'same', kernel_initializer = init)
+    layer_3_1x1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding = 'same', kernel_initializer = init)
 
-    #Encoder
-    #Layer 4 and 7 skip connection
-    output_layer_7 = tf.layers.conv2d_transpose(conv_1x1_layer7, num_classes, kernel_size = 4, 
-                strides = (2,2), padding = 'same', 
-                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-    conv_1x1_layer4 = tf.layers.conv2d(vgg_layer4_out, num_classes, kernel_size = 1, padding ='same', 
-               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-    skip1 = tf.add(conv_1x1_layer4, output_layer_7)
-    skip1 = tf.layers.conv2d(skip1, num_classes, kernel_size = 4, padding ='same', 
-               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3),  strides = (2,2))
-    
-    #Layer 3, and 4 and 7 skip connection
-    conv_1x1_layer3 = tf.layers.conv2d(vgg_layer3_out, num_classes, kernel_size = 1, padding ='same', 
-               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
+    upsample1 = tf.layers.conv2d_transpose(layer_7_1x1, num_classes, 5, strides=2, padding = 'same', kernel_initializer = init)
+    layer1 = tf.layers.batch_normalization(upsample1)  
+    layer1 = tf.add(layer1, layer_4_1x1)
 
-    #Final decoder layer
-    conv_1x1_layer3 = tf.layers.conv2d(conv_1x1_layer3, num_classes, kernel_size = 5, padding ='same', 
-               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3),  strides = (4,4))
-    skip2 = tf.add(conv_1x1_layer3, skip1)
-    output = tf.layers.conv2d(skip2, num_classes, kernel_size = 16, padding ='same',
-        strides = (8,8), kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
+    upsample2 = tf.layers.conv2d_transpose(layer1, num_classes, 5, strides=2, padding = 'same', kernel_initializer = init)
+    layer2 = tf.layers.batch_normalization(upsample2)      
+    layer2 = tf.add(layer2, layer_3_1x1)
 
+    output = tf.layers.conv2d_transpose(layer2, num_classes, 14, strides=8, padding = 'same', kernel_initializer = init)
     return output
+
 tests.test_layers(layers)
 
 
@@ -124,21 +113,18 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     tf.summary.scalar("loss", cross_entropy_loss)
     # Merge all summaries into a single op
     merged_summary_op = tf.summary.merge_all()
-    
-    init = tf.global_variables_initializer()
     logs_path = '/tmp/tensorflow_logs/image_segmentation/'
     
     # op to write logs to Tensorboard
     summary_writer = tf.summary.FileWriter(logs_path, graph=tf.get_default_graph())
-    display_epoch = 20
+    display_epoch = 1
     learn_rate = .001
     dropout = 0.80
     avg_cost = 0
-    with sess.as_default():
-        sess.run(init)
-        for epoch in range(epochs):
-            count = 0
-            for images, labels in get_batches_fn(batch_size):
+    print("Begin training ... ")
+    for epoch in range(epochs):
+        count = 0
+        for images, labels in get_batches_fn(batch_size):
                      #training goes here
                    _, c, summary = sess.run([train_op, cross_entropy_loss, merged_summary_op],
                             feed_dict={input_image: images,
@@ -151,8 +137,8 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                    avg_cost += c/batch_size
                    count+=1
         # Display logs per epoch step
-        if (epoch+1) % display_epoch == 0:
-                print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
+    if (epoch+1) % display_epoch == 0:
+        print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
                       
     print("Optimization Finished!")
     print("Run the command line:\n" \
@@ -168,8 +154,8 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
     
-    epochs = 50
-    batch_size = 10
+    epochs = 20
+    batch_size = 16
 
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
@@ -196,6 +182,7 @@ def run():
 
         # TODO: Train NN using the train_nn function
         _ , train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
+        sess.run(tf.global_variables_initializer())      
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, image_input,
              correct_label, keep_prob, learning_rate)
         
