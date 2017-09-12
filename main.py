@@ -55,37 +55,30 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+
+    #Decoder
     conv_1x1_layer7 = tf.layers.conv2d(vgg_layer7_out, num_classes, kernel_size = 1, padding ='same', 
                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
 
+    #Encoder
+    #Layer 4 and 7 skip connection
+    output_layer_7 = tf.layers.conv2d_transpose(conv_1x1_layer7, num_classes, kernel_size = 4, 
+                strides = (2,2), padding = 'same', 
+                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
     conv_1x1_layer4 = tf.layers.conv2d(vgg_layer4_out, num_classes, kernel_size = 1, padding ='same', 
                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-
+    skip1 = tf.add(conv_1x1_layer4, output_layer_7)
+    skip1 = tf.layers.conv2d(skip1, num_classes, kernel_size = 4, padding ='same', 
+               kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3),  strides = (2,2))
+    
+    #Layer 3, and 4 and 7 skip connection
     conv_1x1_layer3 = tf.layers.conv2d(vgg_layer3_out, num_classes, kernel_size = 1, padding ='same', 
                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
 
     #Final decoder layer
-    output_layer_7 = tf.layers.conv2d_transpose(conv_1x1_layer7, num_classes, kernel_size = 4, 
-                strides = (2,2), padding = 'same', 
-                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-    output_layer_4 = tf.layers.conv2d_transpose(conv_1x1_layer4, num_classes, kernel_size = 4, 
-                strides = (2,2), padding = 'same', 
-                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-    output_layer_3 = tf.layers.conv2d_transpose(conv_1x1_layer3, num_classes, kernel_size = 4, 
-                strides = (2,2), padding = 'same', 
-                kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-
-    #Skip connections
-    output = tf.add(output_layer_7, output_layer_4)
-    
-    output = tf.layers.conv2d_transpose(output, num_classes, kernel_size = 4, strides=(2, 2), 
-            kernel_regularizer =  tf.contrib.layers.l2_regularizer(1e-3))
-    
-    #Skip connection
-    output = tf.add(output, output_layer_3)
-    
-    output = tf.layers.conv2d_transpose(output, num_classes, kernel_size = 16, strides=(8, 8),
-            kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3))
+    skip2 = tf.add(conv_1x1_layer3, skip1)
+    output = conv2d_transpose(skip2, num_classes, 'output',
+                              kernel=16, strides=(8, 8))
 
     return output
 tests.test_layers(layers)
