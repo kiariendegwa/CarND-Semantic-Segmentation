@@ -55,6 +55,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
+    
     init = tf.truncated_normal_initializer(stddev = 0.01)
 
     layer_7_1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding = 'same', kernel_initializer = init)
@@ -68,8 +69,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     upsample2 = tf.layers.conv2d_transpose(layer1, num_classes, kernel_size =5, strides=2, padding = 'same', kernel_initializer = init)
     layer2 = tf.layers.batch_normalization(upsample2)      
     layer2 = tf.add(layer2, layer_3_1x1)
-
     output = tf.layers.conv2d_transpose(layer2, num_classes, kernel_size=14, strides=8, padding = 'same', kernel_initializer = init)
+    
     return output
 
 tests.test_layers(layers)
@@ -109,6 +110,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
+
     # Add tensorboard to this to visualize training intuitively
     tf.summary.scalar("loss", cross_entropy_loss)
     # Merge all summaries into a single op
@@ -117,11 +119,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     
     # op to write logs to Tensorboard
     summary_writer = tf.summary.FileWriter(logs_path, graph=tf.get_default_graph())
-    display_epoch = 1
-    learn_rate = .001
-    dropout = 0.80
+    display_epoch = 5
+    learn_rate = 0.0001
     avg_cost = 0
     print("Begin training ... ")
+
     for epoch in range(epochs):
         count = 0
         for images, labels in get_batches_fn(batch_size):
@@ -130,22 +132,25 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                             feed_dict={input_image: images,
                             correct_label: labels,
                             learning_rate: learn_rate,
-                            keep_prob: dropout})
+                            keep_prob: 0.8})
                    # Write logs at every iteration
                    summary_writer.add_summary(summary, epoch * batch_size + count)
                    # Compute average loss
                    avg_cost += c/batch_size
                    count+=1
         # Display logs per epoch step
-    if (epoch+1) % display_epoch == 0:
-        print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
+        if (epoch+1) % display_epoch == 0:
+            print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
+            # Save the variables to disk.
+            #save_path = saver.save(sess, "/tmp/models/model.ckpt", global_step=epoch)
+            #print("Model saved in file: %s" % save_path)
                       
     print("Optimization Finished!")
     print("Run the command line:\n" \
           "--> tensorboard --logdir=/tmp/tensorflow_logs " \
           "\nThen open http://0.0.0.0:6006/ into your web browser")
                       
-tests.test_train_nn(train_nn)
+#tests.test_train_nn(train_nn)
 
 def run():
     num_classes = 2
@@ -159,11 +164,7 @@ def run():
 
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
-
-    # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
-    # You'll need a GPU with at least 10 teraFLOPS to train on.
-    #  https://www.cityscapes-dataset.com/
-     
+    
     with tf.Session() as sess:
         correct_label = tf.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
         learning_rate = tf.placeholder(tf.float32)
@@ -173,24 +174,19 @@ def run():
         # Create function to get batches
         get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
 
-        # OPTIONAL: Augment Images for better results
-        #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
-
-        # TODO: Build NN using load_vgg, layers, and optimize function
+        # Build NN using load_vgg, layers, and optimize function
         image_input, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, vgg_path)
+        
         nn_last_layer = layers(layer3_out, layer4_out, layer7_out, num_classes)
-
-        # TODO: Train NN using the train_nn function
+        #saver = tf.train.Saver()
+        
+        # Train NN using the train_nn function
         _ , train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
-        sess.run(tf.global_variables_initializer())      
+        sess.run(tf.global_variables_initializer())   
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, image_input,
              correct_label, keep_prob, learning_rate)
-        
-        # TODO: Save inference data using helper.save_inference_samples
+        # Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
-
-        # OPTIONAL: Apply the trained model to a video
-
 
 if __name__ == '__main__':
     run()
