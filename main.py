@@ -70,7 +70,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     layer2 = tf.layers.batch_normalization(upsample2)      
     layer2 = tf.add(layer2, layer_3_1x1)
     output = tf.layers.conv2d_transpose(layer2, num_classes, kernel_size=14, strides=8, padding = 'same', kernel_initializer = init)
-    
+
     return output
 
 tests.test_layers(layers)
@@ -138,6 +138,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                    # Compute average loss
                    avg_cost += c/batch_size
                    count+=1
+                   print(count)
         # Display logs per epoch step
         if (epoch+1) % display_epoch == 0:
             print("Epoch:", '%04d' % (epoch+1), "cost=", "{:.9f}".format(avg_cost))
@@ -159,8 +160,8 @@ def run():
     runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
     
-    epochs = 20
-    batch_size = 16
+    epochs = 1
+    batch_size = 32
 
     # Download pretrained vgg model
     helper.maybe_download_pretrained_vgg(data_dir)
@@ -181,12 +182,12 @@ def run():
         #saver = tf.train.Saver()
         
         # Train NN using the train_nn function
-        _ , train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
+        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
         sess.run(tf.global_variables_initializer())   
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, image_input,
              correct_label, keep_prob, learning_rate)
         # Save inference data using helper.save_inference_samples
-        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
 
 if __name__ == '__main__':
     run()
